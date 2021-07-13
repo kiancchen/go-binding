@@ -1,4 +1,4 @@
-module binding
+module github.com/kiancchen/go-binding
 
 go 1.16
 
