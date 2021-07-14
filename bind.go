@@ -60,29 +60,38 @@ func BindWithStructMeta(r Request, recvPtr interface{}, structMeta *StructMetada
 	sm := structMeta.clone()
 	bindStruct(req, reflect.ValueOf(recvPtr), sm)
 
-	failedFields := checkFields(sm)
-	if len(*failedFields) > 0 {
-		var msg strings.Builder
-		for _, e := range *failedFields {
-			msg.WriteString(e.Error() + "\n")
-		}
-		return errors.New(msg.String())
+	err = checkFields(sm)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func bindStruct(r *request, recv reflect.Value, structMeta *StructMetadata) {
+func bindStruct(r *request, recv reflect.Value, structMeta *StructMetadata) (set bool) {
+	set = false
 	for i := 0; i < structMeta.FieldNum; i++ {
 		fieldMeta := (structMeta.FieldList)[i]
-		resolveField(r, fieldMeta)
-		fieldMeta.setValue(recv.Elem().Field(i))
+		if fieldMeta.isExported {
+			resolveField(r, fieldMeta)
+			if !fieldMeta.isUnset {
+				set = true
+			}
+			fieldMeta.setValue(recv.Elem().Field(i))
+		}
 	}
+	return
 }
 
 func resolveField(r *request, fieldMeta *fieldMetadata) {
 	var value reflect.Value
 	fieldMeta.value = &value
+
+	value = getFieldValue(r, fieldMeta)
+	if !(fieldMeta.isUnset || fieldMeta.hasConversionError) {
+		return
+	}
+	fieldMeta.isUnset = false
 
 	if fieldMeta.isFile {
 		files, ok := r.GetFormFile(fieldMeta.fieldName)
@@ -106,9 +115,8 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 
 	} else if fieldMeta.isStruct {
 		value = reflect.New(fieldMeta.structMeta.StructType)
-		bindStruct(r, value, fieldMeta.structMeta)
+		fieldMeta.isUnset = !bindStruct(r, value, fieldMeta.structMeta)
 		value = value.Elem()
-
 	} else if fieldMeta.isSlice && fieldMeta.sliceMeta.isStruct {
 		sliceMeta := fieldMeta.sliceMeta
 		array := gjson.GetBytes(r.GetBody(), sliceMeta.fieldJsonName).Array()
@@ -132,94 +140,154 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 		if length == 0 {
 			fieldMeta.isUnset = true
 		}
-
 	} else {
-		// 获取原始的 string 数据
-		originValues, ok := getValue(r, fieldMeta)
-		if !ok {
-			fieldMeta.isUnset = true
-			return
-		}
-
-		// 根据注册的 convertor 转化为对应的类型
-		elemType := fieldMeta.elemType
-		length := len(originValues)
-
-		if fieldMeta.isSlice {
-			sliceMeta := fieldMeta.sliceMeta
-			tempValues := make([]string, 0, length)
-			for _, originValue := range originValues {
-				if gjson.Valid(originValue) {
-					array := gjson.Parse(originValue).Array()
-					for _, result := range array {
-						tempValues = append(tempValues, result.String())
-					}
-				} else {
-					tempValues = append(tempValues, originValue)
-				}
-			}
-			length = len(tempValues)
-			originValues = tempValues
-
-			value = reflect.MakeSlice(sliceMeta.sliceType, length, length)
-			elemType = sliceMeta.elemType
-		}
-
-		convertor := getConvertor(elemType)
-		if convertor == nil {
-			fieldMeta.hasConversionError = true
-			return
-		}
-
-		for i, originValue := range originValues {
-			var convertedValue interface{}
-			convertedValue, err := convertor(originValue)
-			if err != nil {
-				value.Index(i).Set(reflect.Zero(fieldMeta.sliceMeta.originalType))
-				continue
-			}
-
-			v := reflect.ValueOf(convertedValue)
-
-			// 如果不是 slice，直接返回第一个
-			if !fieldMeta.isSlice {
-				value = v
-				return
-			}
-
-			if fieldMeta.sliceMeta.isPtr {
-				ptr := reflect.New(v.Type())
-				ptr.Elem().Set(v)
-				v = ptr
-			}
-
-			value.Index(i).Set(v)
-		}
+		fieldMeta.isUnset = true
 	}
+
+	if !fieldMeta.isUnset {
+		fieldMeta.hasConversionError = false
+	}
+
 }
 
-func checkFields(structMeta *StructMetadata) *[]*Error {
-	failedFields := make([]*Error, 0)
+func getFieldValue(r *request, fieldMeta *fieldMetadata) (value reflect.Value) {
+	// 获取原始的 string 数据
+	originValues, ok := getValue(r, fieldMeta)
+	if !ok {
+		fieldMeta.isUnset = true
+		return
+	}
+
+	// 根据注册的 convertor 转化为对应的类型
+	elemType := fieldMeta.elemType
+	length := len(originValues)
+
+	if fieldMeta.isSlice {
+		sliceMeta := fieldMeta.sliceMeta
+		tempValues := make([]string, 0, length)
+		for _, originValue := range originValues {
+			if gjson.Valid(originValue) {
+				array := gjson.Parse(originValue).Array()
+				for _, result := range array {
+					tempValues = append(tempValues, result.String())
+				}
+			} else {
+				tempValues = append(tempValues, originValue)
+			}
+		}
+		length = len(tempValues)
+		originValues = tempValues
+
+		value = reflect.MakeSlice(sliceMeta.sliceType, length, length)
+		elemType = sliceMeta.elemType
+	}
+
+	convertor := getConvertor(elemType)
+	if convertor == nil {
+		fieldMeta.hasConversionError = true
+		return
+	}
+
+	for i, originValue := range originValues {
+		var convertedValue interface{}
+		convertedValue, err := convertor(originValue)
+		if err != nil {
+			value.Index(i).Set(reflect.Zero(fieldMeta.sliceMeta.originalType))
+			continue
+		}
+
+		v := reflect.ValueOf(convertedValue)
+
+		// 如果不是 slice，直接返回第一个
+		if !fieldMeta.isSlice {
+			value = v
+			return
+		}
+
+		if fieldMeta.sliceMeta.isPtr {
+			ptr := reflect.New(v.Type())
+			ptr.Elem().Set(v)
+			v = ptr
+		}
+
+		value.Index(i).Set(v)
+	}
+	return
+}
+
+func checkFields(structMeta *StructMetadata) error {
+	notFoundError := make([]string, 0)
+	conversionError := make([]string, 0)
 	for _, field := range structMeta.FieldList {
 		if field.isUnset && field.isRequired {
-			failedFields = append(failedFields, FieldNotFound.setField(field.fieldJsonName))
+			notFoundError = append(notFoundError, field.fieldJsonName)
 		}
 		if field.hasConversionError {
-			failedFields = append(failedFields, FieldConversionError.setField(field.fieldJsonName))
+			conversionError = append(conversionError, field.fieldJsonName)
 		}
 
 		if field.isFile {
 			continue
 		}
 		if field.isStruct {
-			failedFields = append(failedFields, *checkFields(field.structMeta)...)
+			notFound, conversion := checkFields2(field.structMeta)
+			notFoundError = append(notFoundError, notFound...)
+			conversionError = append(conversionError, conversion...)
 		} else if field.isSlice {
 			for _, sd := range field.sliceMeta.structData {
-				failedFields = append(failedFields, *checkFields(sd)...)
+				notFound, conversion := checkFields2(sd)
+				notFoundError = append(notFoundError, notFound...)
+				conversionError = append(conversionError, conversion...)
 			}
 		}
 	}
-	return &failedFields
+
+	sb := strings.Builder{}
+	if len(notFoundError) != 0 {
+		sb.WriteString(fmt.Sprintf("parameter required but not found: [%v]", strings.Join(notFoundError, ", ")))
+	}
+	if len(conversionError) != 0 {
+		if sb.Len() != 0 {
+			sb.WriteString("; ")
+		}
+
+		sb.WriteString(fmt.Sprintf("parameter type cannot be converted from string: [%v]", strings.Join(conversionError, ", ")))
+	}
+
+	if sb.Len() == 0 {
+		return nil
+	}
+
+	return errors.New(sb.String())
+}
+
+func checkFields2(structMeta *StructMetadata) ([]string, []string) {
+	notFoundError := make([]string, 0)
+	conversionError := make([]string, 0)
+	for _, field := range structMeta.FieldList {
+		if field.isUnset && field.isRequired {
+			notFoundError = append(notFoundError, field.fieldJsonName)
+		}
+		if field.hasConversionError {
+			conversionError = append(conversionError, field.fieldJsonName)
+		}
+
+		if field.isFile {
+			continue
+		}
+		if field.isStruct {
+			notFound, conversion := checkFields2(field.structMeta)
+			notFoundError = append(notFoundError, notFound...)
+			conversionError = append(conversionError, conversion...)
+		} else if field.isSlice {
+			for _, sd := range field.sliceMeta.structData {
+				notFound, conversion := checkFields2(sd)
+				notFoundError = append(notFoundError, notFound...)
+				conversionError = append(conversionError, conversion...)
+			}
+		}
+	}
+	return notFoundError, conversionError
 }
 
 func getValue(r *request, fieldMeta *fieldMetadata) (originValue []string, present bool) {

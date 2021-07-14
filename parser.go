@@ -134,6 +134,8 @@ type fieldMetadata struct {
 	// elemType 的信息
 	sliceMeta *sliceMetadata
 
+	isExported bool
+
 	// Tag原始信息
 	tagInfo reflect.StructTag
 
@@ -220,6 +222,7 @@ func parseStruct(structType *reflect.Type, parentFieldJsonName string) *StructMe
 			fieldType:     &field,
 			tagInfo:       tagInfo,
 			fieldName:     field.Name,
+			isExported:    unicode.IsUpper([]rune(field.Name)[0]),
 			fieldJsonName: fieldJsonName + field.Name,
 		}
 		if field.Anonymous {

@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -12,6 +13,13 @@ import (
 func TestQueryString(t *testing.T) {
 	type metric string
 	type count int32
+	RegisterTypeConvertor(time.Time{}, func(s string) (interface{}, error) {
+		return time.Parse("2006-01-02", s)
+	})
+
+	type Time struct {
+		string
+	}
 
 	type Recv struct {
 		X *struct {
@@ -24,15 +32,18 @@ func TestQueryString(t *testing.T) {
 			G count     `bind:"g,query"`
 			I metric    `bind:"i,query" default:"def"`
 		}
-		Y string  `bind:"y,query,req"`
-		Z *string `bind:"z,query"`
-		H string  `bind:"h,query,req"`
+		Y string    `bind:"y,query,req"`
+		Z *string   `bind:"z,query"`
+		H string    `bind:"h,query,req"`
+		J time.Time `bind:"auto"`
+		K Time      `bind:"auto"`
 	}
-	req, _ := http.NewRequest("POST", "http://localhost:8080?a=a1&a=a2&b=b1&c=c1&c=c2&d=d1&d=d&f=qps&g=1002&e=&e=2&y=y1", nil)
+	req, _ := http.NewRequest("POST", "http://localhost:8080?a=a1&a=a2&b=b1&c=c1&c=c2&d=d1&d=d&f=qps&g=1002&e=&e=2&y=y1&J=2018-01-01&K=2020-01-01", nil)
 	recv := new(Recv)
 	err := Bind(WrapHTTPRequest(req), recv)
 	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), "field=h, cause=field required but not found"))
+	assert.True(t, strings.Contains(err.Error(), "parameter required but not found: [h]"))
+	assert.True(t, strings.Contains(err.Error(), "parameter type cannot be converted from string: [K]"))
 	assert.Equal(t, []string{"a1", "a2"}, recv.X.A)
 	assert.Equal(t, "y1", recv.Y)
 	assert.Equal(t, (*string)(nil), recv.Z)
