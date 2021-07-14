@@ -18,7 +18,7 @@ type Request interface {
 	GetHeader() http.Header
 	GetCookies() []*http.Cookie
 	GetPostForm() (url.Values, error)
-	GetFormFile() map[string][]*multipart.FileHeader
+	GetFormFile() (map[string][]*multipart.FileHeader, error)
 	GetBody() ([]byte, error)
 }
 
@@ -56,11 +56,11 @@ func (r *httpRequest) GetPostForm() (url.Values, error) {
 	return r.PostForm, nil
 }
 
-func (r *httpRequest) GetFormFile() map[string][]*multipart.FileHeader {
+func (r *httpRequest) GetFormFile() (map[string][]*multipart.FileHeader, error) {
 	if r.MultipartForm == nil {
-		return nil
+		return nil, nil
 	}
-	return r.MultipartForm.File
+	return r.MultipartForm.File, nil
 }
 
 func (r *httpRequest) GetBody() ([]byte, error) {
@@ -98,6 +98,11 @@ func newRequest(r Request) (*request, error) {
 		return nil, err
 	}
 
+	formFile, err := r.GetFormFile()
+	if err != nil {
+		return nil, err
+	}
+
 	return &request{
 		header:      r.GetHeader(),
 		query:       r.GetQuery(),
@@ -106,7 +111,7 @@ func newRequest(r Request) (*request, error) {
 		postForm:    postForm,
 		body:        body,
 		cookie:      r.GetCookies(),
-		formFile:    r.GetFormFile(),
+		formFile:    formFile,
 	}, nil
 }
 
