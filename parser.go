@@ -32,21 +32,21 @@ func hasTag(target int, flag int) bool {
 
 // StructMetadata 结构体的结构化信息
 type StructMetadata struct {
-	structName string
+	StructName string
 
 	// 非指针的结构体类型
-	structType reflect.Type
+	StructType reflect.Type
 
 	// 结构体field数量
-	fieldNum int
+	FieldNum int
 
 	// FieldMetaList
-	fieldList []*fieldMetadata
+	FieldList []*fieldMetadata
 }
 
 func (s *StructMetadata) attachLayerNum(num int) {
-	for i := range s.fieldList {
-		f := s.fieldList[i]
+	for i := range s.FieldList {
+		f := s.FieldList[i]
 		f.fieldJsonName = strings.Replace(f.fieldJsonName, "#", strconv.Itoa(num), 1)
 		if f.isSlice {
 			f.sliceMeta.fieldJsonName = strings.Replace(f.sliceMeta.fieldJsonName, "#", strconv.Itoa(num), 1)
@@ -60,9 +60,9 @@ func (s *StructMetadata) attachLayerNum(num int) {
 
 func (s *StructMetadata) clone() *StructMetadata {
 	clone := *s
-	clone.fieldList = make([]*fieldMetadata, len(s.fieldList))
-	for i, field := range s.fieldList {
-		clone.fieldList[i] = field.clone()
+	clone.FieldList = make([]*fieldMetadata, len(s.FieldList))
+	for i, field := range s.FieldList {
+		clone.FieldList[i] = field.clone()
 	}
 	return &clone
 }
@@ -258,10 +258,10 @@ func parseStruct(structType *reflect.Type, parentFieldJsonName string) *StructMe
 	}
 
 	return &StructMetadata{
-		structType: t,
-		fieldNum:   numField,
-		structName: t.Name(),
-		fieldList:  fieldMetaList,
+		StructType: t,
+		FieldNum:   numField,
+		StructName: t.Name(),
+		FieldList:  fieldMetaList,
 	}
 }
 

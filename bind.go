@@ -73,8 +73,8 @@ func BindWithStructMeta(r Request, recvPtr interface{}, structMeta *StructMetada
 }
 
 func bindStruct(r *request, recv reflect.Value, structMeta *StructMetadata) {
-	for i := 0; i < structMeta.fieldNum; i++ {
-		fieldMeta := (structMeta.fieldList)[i]
+	for i := 0; i < structMeta.FieldNum; i++ {
+		fieldMeta := (structMeta.FieldList)[i]
 		resolveField(r, fieldMeta)
 		fieldMeta.setValue(recv.Elem().Field(i))
 	}
@@ -105,7 +105,7 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 		}
 
 	} else if fieldMeta.isStruct {
-		value = reflect.New(fieldMeta.structMeta.structType)
+		value = reflect.New(fieldMeta.structMeta.StructType)
 		bindStruct(r, value, fieldMeta.structMeta)
 		value = value.Elem()
 
@@ -200,7 +200,7 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 
 func checkFields(structMeta *StructMetadata) *[]*Error {
 	failedFields := make([]*Error, 0)
-	for _, field := range structMeta.fieldList {
+	for _, field := range structMeta.FieldList {
 		if field.isUnset && field.isRequired {
 			failedFields = append(failedFields, FieldNotFound.setField(field.fieldJsonName))
 		}
