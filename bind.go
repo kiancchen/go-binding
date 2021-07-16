@@ -192,6 +192,7 @@ func getFieldValue(r *request, fieldMeta *fieldMetadata) (value reflect.Value) {
 		var convertedValue interface{}
 		convertedValue, err := convertor(originValue)
 		if err != nil {
+			// value.Index(i).Set(reflect.Zero(elemType))
 			fieldMeta.hasConversionError = true
 			continue
 		}
