@@ -37,8 +37,9 @@ func TestQueryString(t *testing.T) {
 		H string    `bind:"h,query,req"`
 		J time.Time `bind:"auto"`
 		K Time      `bind:"auto"`
+		L int       `bind:"auto"`
 	}
-	req, _ := http.NewRequest("POST", "http://localhost:8080?a=a1&a=a2&b=b1&c=c1&c=c2&d=d1&d=d&f=qps&g=1002&e=&e=2&y=y1&J=2018-01-01&K=2020-01-01", nil)
+	req, _ := http.NewRequest("POST", "http://localhost:8080?L=a&a=a1&a=a2&b=b1&c=c1&c=c2&d=d1&d=d&f=qps&g=1002&e=&e=2&y=y1&J=2018-01-01&K=2020-01-01", nil)
 	recv := new(Recv)
 	err := Bind(WrapHTTPRequest(req), recv)
 	assert.Error(t, err)
