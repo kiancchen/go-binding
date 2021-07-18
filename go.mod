@@ -1,6 +1,6 @@
 module github.com/kiancchen/go-binding
 
-go 1.16
+go 1.13
 
 require (
 	github.com/pkg/profile v1.6.0 // indirect

@@ -88,9 +88,10 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 	fieldMeta.value = &value
 
 	value = getFieldValue(r, fieldMeta)
-	if !(fieldMeta.isUnset || fieldMeta.hasConversionError) {
+	if fieldMeta.hasValue {
 		return
 	}
+
 	fieldMeta.isUnset = false
 
 	if fieldMeta.isFile {
@@ -112,10 +113,11 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 		} else {
 			value = reflect.ValueOf(*files[0])
 		}
-
+		fieldMeta.hasValue = true
 	} else if fieldMeta.isStruct {
 		value = reflect.New(fieldMeta.structMeta.StructType)
 		fieldMeta.isUnset = !bindStruct(r, value, fieldMeta.structMeta)
+		fieldMeta.hasValue = fieldMeta.isUnset
 		value = value.Elem()
 	} else if fieldMeta.isSlice && fieldMeta.sliceMeta.isStruct {
 		sliceMeta := fieldMeta.sliceMeta
@@ -136,7 +138,7 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 
 			value.Index(j).Set(receiver)
 		}
-
+		fieldMeta.hasValue = true
 		if length == 0 {
 			fieldMeta.isUnset = true
 		}
@@ -146,8 +148,8 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 
 	if !fieldMeta.isUnset {
 		fieldMeta.hasConversionError = false
+		fieldMeta.hasValue = true
 	}
-
 }
 
 func getFieldValue(r *request, fieldMeta *fieldMetadata) (value reflect.Value) {
@@ -191,17 +193,15 @@ func getFieldValue(r *request, fieldMeta *fieldMetadata) (value reflect.Value) {
 	for i, originValue := range originValues {
 		var convertedValue interface{}
 		convertedValue, err := convertor(originValue)
-		if err != nil {
-			// value.Index(i).Set(reflect.Zero(elemType))
-			fieldMeta.hasConversionError = true
-			continue
-		}
-
 		v := reflect.ValueOf(convertedValue)
+		if err != nil {
+			fieldMeta.hasConversionError = true
+		}
 
 		// 如果不是 slice，直接返回第一个
 		if !fieldMeta.isSlice {
 			value = v
+			fieldMeta.hasValue = true
 			return
 		}
 
@@ -213,6 +213,7 @@ func getFieldValue(r *request, fieldMeta *fieldMetadata) (value reflect.Value) {
 
 		value.Index(i).Set(v)
 	}
+	fieldMeta.hasValue = true
 	return
 }
 
@@ -293,7 +294,13 @@ func checkFields2(structMeta *StructMetadata) ([]string, []string) {
 
 func getValue(r *request, fieldMeta *fieldMetadata) (originValue []string, present bool) {
 	if hasTag(fieldMeta.source, header) {
-		originValue, present = r.GetHeader(fieldMeta.fieldName)
+		key := fieldMeta.fieldName
+		key = strings.ToLower(key)
+		key = strings.ReplaceAll(key, "-", " ")
+		key = strings.Title(key)
+		key = strings.ReplaceAll(key, " ", "-")
+
+		originValue, present = r.GetHeader(key)
 		if present {
 			return
 		}
