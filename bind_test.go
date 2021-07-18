@@ -47,10 +47,10 @@ func TestQueryString(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "parameter type cannot be converted from string: [X.e, K, L]"))
 	assert.Equal(t, []string{"a1", "a2"}, recv.X.A)
 	assert.Equal(t, "y1", recv.Y)
-	assert.Equal(t, (*string)(nil), recv.Z)
+	assert.Equal(t, "", *recv.Z)
 
-	// assert.Equal(t, (*int)(nil), (*recv.X.E)[0])
-	// assert.Equal(t, 2, *((*recv.X.E)[1]))
+	assert.Equal(t, 0, *((*recv.X.E)[0]))
+	assert.Equal(t, 2, *((*recv.X.E)[1]))
 	assert.Equal(t, "b1", (recv.X).B)
 	assert.Equal(t, []string{"c1", "c2"}, *(recv.X.C))
 	assert.Equal(t, "d1", *((*recv.X).D))
@@ -149,7 +149,7 @@ func TestQueryNum(t *testing.T) {
 	assert.Equal(t, &[]uint16{31, 32}, (*recv.X).C)
 	assert.Equal(t, float32(41), *(*recv.X).D)
 	assert.Equal(t, true, recv.Y)
-	assert.Equal(t, (*int64)(nil), recv.Z)
+	assert.Equal(t, int64(0), *recv.Z)
 }
 
 func TestHeaderString(t *testing.T) {
@@ -183,7 +183,7 @@ func TestHeaderString(t *testing.T) {
 	assert.Equal(t, []string{"c1", "c2"}, *(*recv.X).C)
 	assert.Equal(t, "d1", *(*recv.X).D)
 	assert.Equal(t, "y1", recv.Y)
-	assert.Equal(t, (*string)(nil), recv.Z)
+	assert.Equal(t, "", *recv.Z)
 }
 
 func TestHeaderNum(t *testing.T) {
@@ -217,7 +217,7 @@ func TestHeaderNum(t *testing.T) {
 	assert.Equal(t, &[]uint16{31, 32}, (*recv.X).C)
 	assert.Equal(t, float32(41), *(*recv.X).D)
 	assert.Equal(t, true, recv.Y)
-	assert.Equal(t, (*int64)(nil), recv.Z)
+	assert.Equal(t, int64(0), *recv.Z)
 }
 
 func TestFormString(t *testing.T) {
@@ -255,7 +255,7 @@ func TestFormString(t *testing.T) {
 	assert.Equal(t, []string{"c1", "c2"}, *(*recv.X).C)
 	assert.Equal(t, "d1", *(*recv.X).D)
 	assert.Equal(t, "y1", recv.Y)
-	assert.Equal(t, (*string)(nil), recv.Z)
+	assert.Equal(t, "", *recv.Z)
 
 }
 
@@ -294,7 +294,7 @@ func TestFormNum(t *testing.T) {
 	assert.Equal(t, &[]uint16{31, 32}, (*recv.X).C)
 	assert.Equal(t, float32(41), *(*recv.X).D)
 	assert.Equal(t, true, recv.Y)
-	assert.Equal(t, (*int64)(nil), recv.Z)
+	assert.Equal(t, int64(0), *recv.Z)
 }
 
 func TestJSON(t *testing.T) {

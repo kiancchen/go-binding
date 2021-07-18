@@ -1,7 +1,7 @@
 package binding
 
 import (
-	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -67,7 +67,7 @@ func (r *httpRequest) GetBody() ([]byte, error) {
 	if r.Body == nil {
 		return nil, nil
 	}
-	buf, err := io.ReadAll(r.Body)
+	buf, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
 		return nil, err

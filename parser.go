@@ -159,6 +159,8 @@ type fieldMetadata struct {
 
 	value *reflect.Value
 
+	hasValue bool
+
 	isUnset bool
 
 	hasConversionError bool
@@ -166,17 +168,17 @@ type fieldMetadata struct {
 
 func (f *fieldMetadata) setValue(recv reflect.Value) {
 	// 如果有错误，那设为零值
-	if f.isUnset || f.hasConversionError {
-		recv.Set(reflect.Zero(f.originalType))
-		return
+	v := *f.value
+	if !f.hasValue {
+		v = reflect.Zero(f.elemType)
 	}
 
 	if f.isPtr {
-		ptr := reflect.New(f.value.Type())
-		ptr.Elem().Set(*f.value)
+		ptr := reflect.New(v.Type())
+		ptr.Elem().Set(v)
 		recv.Set(ptr)
 	} else {
-		recv.Set(f.value.Convert(f.elemType))
+		recv.Set(v.Convert(f.elemType))
 	}
 }
 

@@ -23,7 +23,7 @@ var (
 		reflect.Int: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseInt(originValue, 10, 32)
 			if err != nil {
-				return nil, err
+				return 0, err
 			}
 
 			return int(value), nil
@@ -31,7 +31,7 @@ var (
 		reflect.Int8: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseInt(originValue, 10, 8)
 			if err != nil {
-				return nil, err
+				return int8(0), err
 			}
 
 			return int8(value), nil
@@ -39,7 +39,7 @@ var (
 		reflect.Int16: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseInt(originValue, 10, 16)
 			if err != nil {
-				return nil, err
+				return int16(0), err
 			}
 
 			return int16(value), nil
@@ -47,7 +47,7 @@ var (
 		reflect.Int32: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseInt(originValue, 10, 32)
 			if err != nil {
-				return nil, err
+				return int32(0), err
 			}
 
 			return int32(value), nil
@@ -55,7 +55,7 @@ var (
 		reflect.Int64: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseInt(originValue, 10, 64)
 			if err != nil {
-				return nil, err
+				return int64(0), err
 			}
 
 			return int64(value), nil
@@ -63,7 +63,7 @@ var (
 		reflect.Uint: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseUint(originValue, 10, 32)
 			if err != nil {
-				return nil, err
+				return uint(0), err
 			}
 
 			return uint(value), nil
@@ -71,7 +71,7 @@ var (
 		reflect.Uint8: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseUint(originValue, 10, 8)
 			if err != nil {
-				return nil, err
+				return uint8(0), err
 			}
 
 			return uint8(value), nil
@@ -79,7 +79,7 @@ var (
 		reflect.Uint16: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseUint(originValue, 10, 16)
 			if err != nil {
-				return nil, err
+				return uint16(0), err
 			}
 
 			return uint16(value), nil
@@ -87,7 +87,7 @@ var (
 		reflect.Uint32: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseUint(originValue, 10, 32)
 			if err != nil {
-				return nil, err
+				return uint32(0), err
 			}
 
 			return uint32(value), nil
@@ -95,7 +95,7 @@ var (
 		reflect.Uint64: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseUint(originValue, 10, 64)
 			if err != nil {
-				return nil, err
+				return uint64(0), err
 			}
 
 			return uint64(value), nil
@@ -103,7 +103,7 @@ var (
 		reflect.Float32: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseFloat(originValue, 32)
 			if err != nil {
-				return nil, err
+				return float32(0), err
 			}
 
 			return float32(value), nil
@@ -111,7 +111,7 @@ var (
 		reflect.Float64: func(originValue string) (interface{}, error) {
 			value, err := strconv.ParseFloat(originValue, 64)
 			if err != nil {
-				return nil, err
+				return float64(0), err
 			}
 
 			return float64(value), nil
