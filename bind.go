@@ -10,18 +10,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-const (
-	// tagBind 的选项
-	bindAuto     = "auto"
-	bindHeader   = "header"
-	bindQuery    = "query"
-	bindForm     = "form"
-	bindPath     = "path"
-	bindJson     = "json"
-	bindRequired = "required"
-	bindReq      = "req"
-)
-
 func Bind(r Request, recvPtr interface{}) error {
 	recvType := reflect.TypeOf(recvPtr)
 	if recvType.Kind() != reflect.Ptr {
@@ -160,6 +148,25 @@ func getFieldValue(r *request, fieldMeta *fieldMetadata) (value reflect.Value) {
 		return
 	}
 
+	var after []string
+	var processed bool
+	for _, name := range fieldMeta.preprocessor {
+		processor, ok := getPreprocessor(name)
+		if ok {
+			processed = true
+			for _, v := range originValues {
+				res, err := processor(v)
+				if err != nil {
+					fieldMeta.errs = append(fieldMeta.errs, err)
+				}
+				after = append(after, res...)
+			}
+		}
+	}
+	if processed {
+		originValues = after
+	}
+
 	// 根据注册的 convertor 转化为对应的类型
 	elemType := fieldMeta.elemType
 	length := len(originValues)
@@ -220,6 +227,7 @@ func getFieldValue(r *request, fieldMeta *fieldMetadata) (value reflect.Value) {
 func checkFields(structMeta *StructMetadata) error {
 	notFoundError := make([]string, 0)
 	conversionError := make([]string, 0)
+	errs := make([]string, 0)
 	for _, field := range structMeta.FieldList {
 		if field.isUnset && field.isRequired {
 			notFoundError = append(notFoundError, field.fieldJsonName)
@@ -227,19 +235,24 @@ func checkFields(structMeta *StructMetadata) error {
 		if field.hasConversionError {
 			conversionError = append(conversionError, field.fieldJsonName)
 		}
+		for _, err := range field.errs {
+			errs = append(errs, err.Error())
+		}
 
 		if field.isFile {
 			continue
 		}
 		if field.isStruct {
-			notFound, conversion := checkFields2(field.structMeta)
+			notFound, conversion, es := checkFields2(field.structMeta)
 			notFoundError = append(notFoundError, notFound...)
 			conversionError = append(conversionError, conversion...)
+			errs = append(errs, es...)
 		} else if field.isSlice {
 			for _, sd := range field.sliceMeta.structData {
-				notFound, conversion := checkFields2(sd)
+				notFound, conversion, es := checkFields2(sd)
 				notFoundError = append(notFoundError, notFound...)
 				conversionError = append(conversionError, conversion...)
+				errs = append(errs, es...)
 			}
 		}
 	}
@@ -255,6 +268,9 @@ func checkFields(structMeta *StructMetadata) error {
 
 		sb.WriteString(fmt.Sprintf("parameter type cannot be converted from string: [%v]", strings.Join(conversionError, ", ")))
 	}
+	for _, err := range errs {
+		sb.WriteString(err)
+	}
 
 	if sb.Len() == 0 {
 		return nil
@@ -263,9 +279,10 @@ func checkFields(structMeta *StructMetadata) error {
 	return errors.New(sb.String())
 }
 
-func checkFields2(structMeta *StructMetadata) ([]string, []string) {
+func checkFields2(structMeta *StructMetadata) ([]string, []string, []string) {
 	notFoundError := make([]string, 0)
 	conversionError := make([]string, 0)
+	errs := make([]string, 0)
 	for _, field := range structMeta.FieldList {
 		if field.isUnset && field.isRequired {
 			notFoundError = append(notFoundError, field.fieldJsonName)
@@ -273,23 +290,28 @@ func checkFields2(structMeta *StructMetadata) ([]string, []string) {
 		if field.hasConversionError {
 			conversionError = append(conversionError, field.fieldJsonName)
 		}
+		for _, err := range field.errs {
+			errs = append(errs, err.Error())
+		}
 
 		if field.isFile {
 			continue
 		}
 		if field.isStruct {
-			notFound, conversion := checkFields2(field.structMeta)
+			notFound, conversion, es := checkFields2(field.structMeta)
 			notFoundError = append(notFoundError, notFound...)
 			conversionError = append(conversionError, conversion...)
+			errs = append(errs, es...)
 		} else if field.isSlice {
 			for _, sd := range field.sliceMeta.structData {
-				notFound, conversion := checkFields2(sd)
+				notFound, conversion, es := checkFields2(sd)
 				notFoundError = append(notFoundError, notFound...)
 				conversionError = append(conversionError, conversion...)
+				errs = append(errs, es...)
 			}
 		}
 	}
-	return notFoundError, conversionError
+	return notFoundError, conversionError, errs
 }
 
 func getValue(r *request, fieldMeta *fieldMetadata) (originValue []string, present bool) {

@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	// bindSplit tag的key，value用英文逗号分隔
-	bindSplit  = ","
+	// split tag的key，value用英文逗号分隔
+	split      = ","
 	tagBind    = "bind"
 	tagDefault = "default"
+	tagPre     = "pre"
 
 	// 参数来源
 	header = 1 << 0
@@ -22,6 +23,16 @@ const (
 	path   = 1 << 3
 	json   = 1 << 4
 	Auto   = math.MaxInt32
+
+	// tagBind 的选项
+	bindAuto     = "auto"
+	bindHeader   = "header"
+	bindQuery    = "query"
+	bindForm     = "form"
+	bindPath     = "path"
+	bindJson     = "json"
+	bindRequired = "required"
+	bindReq      = "req"
 )
 
 var fileType = reflect.TypeOf(multipart.FileHeader{})
@@ -154,6 +165,8 @@ type fieldMetadata struct {
 	// 有没有设置default值
 	hasDefault bool
 
+	preprocessor []string
+
 	// default值
 	defaultVal string
 
@@ -164,6 +177,8 @@ type fieldMetadata struct {
 	isUnset bool
 
 	hasConversionError bool
+
+	errs []error
 }
 
 func (f *fieldMetadata) setValue(recv reflect.Value) {
@@ -272,8 +287,8 @@ func parseStruct(structType *reflect.Type, parentFieldJsonName string) *StructMe
 
 func parseTag(fieldMeta *fieldMetadata, fieldJsonName string) {
 	tagInfo := fieldMeta.tagInfo
-	tags := strings.Split(tagInfo.Get(tagBind), bindSplit)
-	for _, value := range tags {
+	bindTags := strings.Split(tagInfo.Get(tagBind), split)
+	for _, value := range bindTags {
 		if value == "" {
 			continue
 		}
@@ -303,6 +318,8 @@ func parseTag(fieldMeta *fieldMetadata, fieldJsonName string) {
 			fieldMeta.fieldJsonName = fieldJsonName + fieldMeta.fieldName
 		}
 	}
+
+	fieldMeta.preprocessor = strings.Split(tagInfo.Get(tagPre), split)
 
 	// default 解析
 	defaultStr, ok := tagInfo.Lookup(tagDefault)
