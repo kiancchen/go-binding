@@ -7,8 +7,36 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kiancchen/unirest-go"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestQuerySplit(t *testing.T) {
+	type Recv struct {
+		X *struct {
+			A []int `bind:"a,query" pre:"split"`
+		}
+	}
+	req, _ := unirest.New().AddQuery("a", "1,2,3").AddQuery("a", "4,5,6b").ParseRequest()
+	recv := new(Recv)
+	err := Bind(WrapHTTPRequest(req), recv)
+	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "parameter type cannot be converted from string: [X.a]"))
+	assert.Equal(t, []int{1, 2, 3, 4, 5, 0}, recv.X.A)
+}
+
+func TestQueryPreErr(t *testing.T) {
+	type Recv struct {
+		X *struct {
+			A []int `bind:"a,query" pre:"__testErr"`
+		}
+	}
+	req, _ := unirest.New().AddQuery("a", "1,2,3").ParseRequest()
+	recv := new(Recv)
+	err := Bind(WrapHTTPRequest(req), recv)
+	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "__testErr"))
+}
 
 func TestQueryString(t *testing.T) {
 	type metric string
@@ -39,7 +67,21 @@ func TestQueryString(t *testing.T) {
 		K Time      `bind:"auto"`
 		L int       `bind:"auto"`
 	}
-	req, _ := http.NewRequest("POST", "http://localhost:8080?L=a&a=a1&a=a2&b=b1&c=c1&c=c2&d=d1&d=d&f=qps&g=1002&e=&e=2&y=y1&J=2018-01-01&K=2020-01-01", nil)
+	req, _ := unirest.New().AddQuery("a", "a1").
+		AddQuery("a", "a2").
+		AddQuery("b", "b1").
+		AddQuery("c", "c1").
+		AddQuery("c", "c2").
+		AddQuery("d", "d1").
+		AddQuery("d", "d").
+		AddQuery("f", "qps").
+		AddQuery("g", "1002").
+		AddQuery("e", "").
+		AddQuery("e", "2").
+		AddQuery("y", "y1").
+		AddQuery("J", "2018-01-01").
+		AddQuery("K", "2020-01-01").
+		AddQuery("L", "a").ParseRequest()
 	recv := new(Recv)
 	err := Bind(WrapHTTPRequest(req), recv)
 	assert.Error(t, err)
@@ -77,8 +119,8 @@ func TestAutoNum(t *testing.T) {
 		L  []int32 `bind:"auto"`
 		M  int     `bind:"auto" default:"99"`
 	}
-	req, _ := http.NewRequest("POST", "http://localhost:8080?A=1&B=2&C=3&D=4&E=5&F=6&G=7&H=8&I=1.123&J=2.11&K=abc&L=1&L=2", nil)
-	recv := new(Recv)
+	req, _ := unirest.New().SetURL("http://localhost:8080?A=1&B=2&C=3&D=4&E=5&F=6&G=7&H=8&I=1.123&J=2.11&K=abc&L=1&L=2").ParseRequest()
+	recv := &Recv{}
 	sm := ParseStruct(recv)
 	err := BindWithStructMeta(WrapHTTPRequest(req), recv, sm)
 	assert.NoError(t, err)
@@ -113,8 +155,9 @@ func TestJson(t *testing.T) {
 		} `bind:"auto"`
 	}
 
-	req, _ := http.NewRequest("POST", "http://localhost:8080/?a=a1&a=a2&b=b1&c=c1&c=c2&d=d1&d=d&f=qps&g=1002&e=&e=2&y=y1",
-		strings.NewReader("{\"A\":{\"A1\":1,\"B\":[{\"B1\":\"A.B.1.B1\",\"B2\":\"A.B.1.B2\"},{\"B1\":\"A.B.2.B1\"},{\"B1\":\"A.B.3.B1\",\"C\":[{\"C1\":\"A.B.3.C.1.C1\"},{\"C1\":\"A.B.3.C.2.C1\"}]}]}}"))
+	req, _ := unirest.New().SetURL("http://localhost:8080/?a=a1&a=a2&b=b1&c=c1&c=c2&d=d1&d=d&f=qps&g=1002&e=&e=2&y=y1").
+		SetJSONBody([]byte("{\"A\":{\"A1\":1,\"B\":[{\"B1\":\"A.B.1.B1\",\"B2\":\"A.B.1.B2\"},{\"B1\":\"A.B.2.B1\"},{\"B1\":\"A.B.3.B1\",\"C\":[{\"C1\":\"A.B.3.C.1.C1\"},{\"C1\":\"A.B.3.C.2.C1\"}]}]}}")).
+		ParseRequest()
 	recv := new(TestJsonT)
 	err := Bind(WrapHTTPRequest(req), recv)
 	assert.Error(t, err)
@@ -140,7 +183,7 @@ func TestQueryNum(t *testing.T) {
 		Y bool   `bind:"y,query,req"`
 		Z *int64 `bind:"z,query"`
 	}
-	req, _ := http.NewRequest("POST", "http://localhost:8080/?a=11&a=12&b=21&c=31&c=32&d=41&d=42&y=true", nil)
+	req, _ := unirest.New().SetURL("http://localhost:8080/?a=11&a=12&b=21&c=31&c=32&d=41&d=42&y=true").ParseRequest()
 	recv := new(Recv)
 	err := Bind(WrapHTTPRequest(req), recv)
 	assert.NoError(t, err)
@@ -298,7 +341,6 @@ func TestFormNum(t *testing.T) {
 }
 
 func TestJSON(t *testing.T) {
-	// binding.ResetJSONUnmarshaler(false, json.Unmarshal)
 	type metric string
 	type count int32
 	type ZS struct {
@@ -318,7 +360,7 @@ func TestJSON(t *testing.T) {
 		ZS `bind:"auto"`
 	}
 
-	bodyReader := strings.NewReader(`{
+	jsn := []byte(`{
 		"X": {
 			"a": ["a1","a2"],
 			"B": 21,
@@ -331,10 +373,7 @@ func TestJSON(t *testing.T) {
 		"Z": 6
 	}`)
 
-	header := make(http.Header)
-	header.Set("Content-Type", "application/json")
-	req, _ := http.NewRequest("POST", "http://localhost:8080", bodyReader)
-	req.Header = header
+	req, _ := unirest.New().SetURL("/").SetJSONBody(jsn).ParseRequest()
 
 	recv := new(Recv)
 	err := Bind(WrapHTTPRequest(req), recv)
@@ -348,4 +387,34 @@ func TestJSON(t *testing.T) {
 	// assert.Equal(t, map[string]string{"a": "x"}, (*recv.X).M)
 	assert.Equal(t, "", recv.Y)
 	assert.Equal(t, (int64)(6), *recv.Z)
+}
+
+func TestJSON2(t *testing.T) {
+	type site struct {
+		Id         int    `bind:"auto" default:"99"`
+		SiteDomain string `bind:"auto,required"`
+	}
+
+	type request struct {
+		Sites []*site `bind:"auto"`
+	}
+
+	req, _ := unirest.New().SetJSONBody([]byte(`
+{
+	"Sites":[
+		{
+			"SiteDomain":"b.cn",
+			"Id":1
+		},
+        {
+            "Id":2
+        },
+        {
+            
+        }
+    ]
+}`)).ParseRequest()
+	recv := new(request)
+	err := Bind(WrapHTTPRequest(req), recv)
+	assert.Error(t, err)
 }
