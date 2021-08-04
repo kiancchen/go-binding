@@ -99,6 +99,8 @@ func TestQueryString(t *testing.T) {
 	assert.Equal(t, metric("qps"), recv.X.F)
 	assert.Equal(t, count(1002), recv.X.G)
 	assert.Equal(t, metric("def"), recv.X.I)
+	tm, _ := time.Parse("2006-01-02", "2018-01-01")
+	assert.Equal(t, tm, recv.J)
 
 }
 
@@ -403,11 +405,11 @@ func TestJSON2(t *testing.T) {
 {
 	"Sites":[
 		{
-			"SiteDomain":"b.cn",
-			"Id":1
+			"SiteDomain": "b.cn",
+			"Id": 1
 		},
         {
-            "Id":2
+            "Id": 2
         },
         {
             
