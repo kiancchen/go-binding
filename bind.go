@@ -60,7 +60,7 @@ func bindStruct(r *request, recv reflect.Value, structMeta *StructMetadata) (set
 	set = false
 	for i := 0; i < structMeta.FieldNum; i++ {
 		fieldMeta := (structMeta.FieldList)[i]
-		if fieldMeta.isExported {
+		if !fieldMeta.isIgnored && fieldMeta.isExported {
 			resolveField(r, fieldMeta)
 			if !fieldMeta.isUnset {
 				set = true

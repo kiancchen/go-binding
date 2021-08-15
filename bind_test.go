@@ -15,7 +15,7 @@ func TestQuerySplit(t *testing.T) {
 	type Recv struct {
 		X *struct {
 			A []int `bind:"a,query" pre:"split"`
-		}
+		} `bind:"auto"`
 	}
 	req, _ := unirest.New().AddQuery("a", "1,2,3").AddQuery("a", "4,5,6b").ParseRequest()
 	recv := new(Recv)
@@ -29,7 +29,7 @@ func TestQueryPreErr(t *testing.T) {
 	type Recv struct {
 		X *struct {
 			A []int `bind:"a,query" pre:"__testErr"`
-		}
+		} `bind:"auto"`
 	}
 	req, _ := unirest.New().AddQuery("a", "1,2,3").ParseRequest()
 	recv := new(Recv)
@@ -59,7 +59,7 @@ func TestQueryString(t *testing.T) {
 			F metric    `bind:"f,query"`
 			G count     `bind:"g,query"`
 			I metric    `bind:"i,query" default:"def"`
-		}
+		} `bind:"auto"`
 		Y string    `bind:"y,query,req"`
 		Z *string   `bind:"z,query"`
 		H string    `bind:"h,query,req"`
@@ -181,7 +181,7 @@ func TestQueryNum(t *testing.T) {
 			B int32     `bind:"b,query"`
 			C *[]uint16 `bind:"c,query,req"`
 			D *float32  `bind:"d,query"`
-		}
+		} `bind:"auto"`
 		Y bool   `bind:"y,query,req"`
 		Z *int64 `bind:"z,query"`
 	}
@@ -204,7 +204,7 @@ func TestHeaderString(t *testing.T) {
 			B string    `bind:"X-B,header"`
 			C *[]string `bind:"X-C,header,req"`
 			D *string   `bind:"X-D,header"`
-		}
+		} `bind:"auto"`
 		Y string  `bind:"X-Y,header,req"`
 		Z *string `bind:"X-Z,header"`
 	}
@@ -238,7 +238,7 @@ func TestHeaderNum(t *testing.T) {
 			B int32     `bind:"X-B,header"`
 			C *[]uint16 `bind:"X-C,header,req"`
 			D *float32  `bind:"X-D,header"`
-		}
+		} `bind:"auto"`
 		Y bool   `bind:"X-Y,header,req"`
 		Z *int64 `bind:"X-Z,header"`
 	}
@@ -272,7 +272,7 @@ func TestFormString(t *testing.T) {
 			B string    `bind:"b,form"`
 			C *[]string `bind:"c,form,req"`
 			D *string   `bind:"d,form"`
-		}
+		} `bind:"auto"`
 		Y string  `bind:"y,form,req"`
 		Z *string `bind:"z,form"`
 	}
@@ -311,7 +311,7 @@ func TestFormNum(t *testing.T) {
 			B int32     `bind:"b,form"`
 			C *[]uint16 `bind:"c,form,req"`
 			D *float32  `bind:"d,form"`
-		}
+		} `bind:"auto"`
 		Y bool   `bind:"y,form,req"`
 		Z *int64 `bind:"z,form"`
 	}

@@ -119,6 +119,8 @@ func (s *sliceMetadata) clone() *sliceMetadata {
 
 // Field的结构化信息
 type fieldMetadata struct {
+	isIgnored bool
+
 	// Field原始信息
 	fieldType *reflect.StructField
 
@@ -181,33 +183,85 @@ type fieldMetadata struct {
 	errs []error
 }
 
-func (f *fieldMetadata) setValue(recv reflect.Value) {
+func (field *fieldMetadata) setValue(recv reflect.Value) {
 	// 如果有错误，那设为零值
-	v := *f.value
-	if !f.hasValue {
-		v = reflect.Zero(f.elemType)
+	v := *field.value
+	if !field.hasValue {
+		v = reflect.Zero(field.elemType)
 	}
 
-	if f.isPtr {
+	if field.isPtr {
 		ptr := reflect.New(v.Type())
 		ptr.Elem().Set(v)
 		recv.Set(ptr)
 	} else {
-		recv.Set(v.Convert(f.elemType))
+		recv.Set(v.Convert(field.elemType))
 	}
 }
 
-func (f *fieldMetadata) clone() *fieldMetadata {
-	clone := *f
-	if f.structMeta != nil {
-		clone.structMeta = f.structMeta.clone()
+func (field *fieldMetadata) clone() *fieldMetadata {
+	clone := *field
+	if field.structMeta != nil {
+		clone.structMeta = field.structMeta.clone()
 	}
 
-	if f.sliceMeta != nil {
-		clone.sliceMeta = f.sliceMeta.clone()
+	if field.sliceMeta != nil {
+		clone.sliceMeta = field.sliceMeta.clone()
 	}
 
 	return &clone
+}
+
+func (field *fieldMetadata) parseTag() {
+	tagInfo := field.tagInfo
+	bindTag, ok := tagInfo.Lookup(tagBind)
+	if !ok {
+		field.isIgnored = true
+		return
+	}
+
+	bindTags := strings.Split(bindTag, split)
+	for _, value := range bindTags {
+		if value == "" {
+			continue
+		}
+		switch value {
+		case bindQuery:
+			field.source |= query
+		case bindForm:
+			field.source |= form
+		case bindHeader:
+			field.source |= header
+			// header 首字母自动大写
+			name := field.fieldName
+			for i, v := range name {
+				field.fieldName = string(unicode.ToUpper(v)) + name[i+1:]
+				break
+			}
+		case bindPath:
+			field.source |= path
+		case bindAuto:
+			field.source |= Auto
+		case bindJson:
+			field.source |= json
+		case bindRequired, bindReq:
+			field.isRequired = true
+		default:
+			field.fieldJsonName = strings.TrimSuffix(field.fieldJsonName, field.fieldName)
+			field.fieldJsonName = field.fieldJsonName + value
+			field.fieldName = value
+
+		}
+	}
+
+	field.preprocessor = strings.Split(tagInfo.Get(tagPre), split)
+
+	// default 解析
+	defaultStr, ok := tagInfo.Lookup(tagDefault)
+	if ok {
+		field.hasDefault = true
+		field.defaultVal = defaultStr
+	}
 }
 
 func ParseStruct(structType interface{}) *StructMetadata {
@@ -246,7 +300,12 @@ func parseStruct(structType *reflect.Type, parentFieldJsonName string) *StructMe
 			fieldMeta.fieldJsonName = fieldJsonName
 		}
 
-		parseTag(fieldMeta, fieldJsonName)
+		fieldMetaList[i] = fieldMeta
+
+		fieldMeta.parseTag()
+		if fieldMeta.isIgnored {
+			continue
+		}
 
 		// 最原始的类型，如 *struct
 		fieldType := field.Type
@@ -273,8 +332,6 @@ func parseStruct(structType *reflect.Type, parentFieldJsonName string) *StructMe
 				fieldMeta.isFile = true
 			}
 		}
-
-		fieldMetaList[i] = fieldMeta
 	}
 
 	return &StructMetadata{
@@ -282,50 +339,6 @@ func parseStruct(structType *reflect.Type, parentFieldJsonName string) *StructMe
 		FieldNum:   numField,
 		StructName: t.Name(),
 		FieldList:  fieldMetaList,
-	}
-}
-
-func parseTag(fieldMeta *fieldMetadata, fieldJsonName string) {
-	tagInfo := fieldMeta.tagInfo
-	bindTags := strings.Split(tagInfo.Get(tagBind), split)
-	for _, value := range bindTags {
-		if value == "" {
-			continue
-		}
-		switch value {
-		case bindQuery:
-			fieldMeta.source |= query
-		case bindForm:
-			fieldMeta.source |= form
-		case bindHeader:
-			fieldMeta.source |= header
-			// header 首字母自动大写
-			name := fieldMeta.fieldName
-			for i, v := range name {
-				fieldMeta.fieldName = string(unicode.ToUpper(v)) + name[i+1:]
-				break
-			}
-		case bindPath:
-			fieldMeta.source |= path
-		case bindAuto:
-			fieldMeta.source |= Auto
-		case bindJson:
-			fieldMeta.source |= json
-		case bindRequired, bindReq:
-			fieldMeta.isRequired = true
-		default:
-			fieldMeta.fieldName = value
-			fieldMeta.fieldJsonName = fieldJsonName + fieldMeta.fieldName
-		}
-	}
-
-	fieldMeta.preprocessor = strings.Split(tagInfo.Get(tagPre), split)
-
-	// default 解析
-	defaultStr, ok := tagInfo.Lookup(tagDefault)
-	if ok {
-		fieldMeta.hasDefault = true
-		fieldMeta.defaultVal = defaultStr
 	}
 }
 
