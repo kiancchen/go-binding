@@ -25,6 +25,7 @@ const (
 	Auto   = math.MaxInt32
 
 	// tagBind 的选项
+	bindIgnore   = "-"
 	bindAuto     = "auto"
 	bindHeader   = "header"
 	bindQuery    = "query"
@@ -216,7 +217,7 @@ func (field *fieldMetadata) parseTag() {
 	tagInfo := field.tagInfo
 	bindTag, ok := tagInfo.Lookup(tagBind)
 	if !ok {
-		field.isIgnored = true
+		field.source |= Auto
 		return
 	}
 
@@ -226,6 +227,8 @@ func (field *fieldMetadata) parseTag() {
 			continue
 		}
 		switch value {
+		case bindIgnore:
+			field.isIgnored = true
 		case bindQuery:
 			field.source |= query
 		case bindForm:

@@ -335,13 +335,14 @@ func getValue(r *request, fieldMeta *fieldMetadata) (originValue []string, prese
 		}
 	}
 
-	// if hasTag(fieldMeta.source, path) {
-	// 	value, present = r.GetPath(fieldMeta.fieldName)
-	// 	if present {
-	// 		originValue = []string{value}
-	// 		return
-	// 	}
-	// }
+	if hasTag(fieldMeta.source, path) {
+		var value string
+		value, present = r.getPathParam(fieldMeta.fieldName)
+		if present {
+			originValue = []string{value}
+			return
+		}
+	}
 
 	if hasTag(fieldMeta.source, form) {
 		originValue, present = r.GetPostForm(fieldMeta.fieldName)

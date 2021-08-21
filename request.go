@@ -14,6 +14,7 @@ const (
 type Request interface {
 	GetMethod() string
 	GetQuery() url.Values
+	GetPathParam(key string) (string, bool)
 	GetContentType() string
 	GetHeader() http.Header
 	GetCookies() []*http.Cookie
@@ -38,6 +39,10 @@ func (r *httpRequest) GetMethod() string {
 }
 func (r *httpRequest) GetQuery() url.Values {
 	return r.URL.Query()
+}
+
+func (r *httpRequest) GetPathParam(key string) (string, bool) {
+	return "", false
 }
 
 func (r *httpRequest) GetContentType() string {
@@ -77,14 +82,15 @@ func (r *httpRequest) GetBody() ([]byte, error) {
 }
 
 type request struct {
-	header      http.Header
-	query       url.Values
-	method      string
-	contentType string
-	postForm    url.Values
-	body        []byte
-	cookie      []*http.Cookie
-	formFile    map[string][]*multipart.FileHeader
+	header       http.Header
+	query        url.Values
+	getPathParam func(key string) (string, bool)
+	method       string
+	contentType  string
+	postForm     url.Values
+	body         []byte
+	cookie       []*http.Cookie
+	formFile     map[string][]*multipart.FileHeader
 }
 
 func newRequest(r Request) (*request, error) {
@@ -104,14 +110,15 @@ func newRequest(r Request) (*request, error) {
 	}
 
 	return &request{
-		header:      r.GetHeader(),
-		query:       r.GetQuery(),
-		method:      r.GetMethod(),
-		contentType: r.GetContentType(),
-		postForm:    postForm,
-		body:        body,
-		cookie:      r.GetCookies(),
-		formFile:    formFile,
+		header:       r.GetHeader(),
+		query:        r.GetQuery(),
+		getPathParam: r.GetPathParam,
+		method:       r.GetMethod(),
+		contentType:  r.GetContentType(),
+		postForm:     postForm,
+		body:         body,
+		cookie:       r.GetCookies(),
+		formFile:     formFile,
 	}, nil
 }
 

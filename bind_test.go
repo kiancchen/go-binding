@@ -143,6 +143,26 @@ func TestAutoNum(t *testing.T) {
 	assert.Equal(t, 99, recv.M)
 }
 
+func TestIgnoreQuery(t *testing.T) {
+	type Recv struct {
+		A2 int16 `bind:"A,auto"`
+		B  int16
+		C  int32
+		D  []int32 `bind:"-"`
+		E  int     `bind:"F,-" default:"99"`
+	}
+	req, _ := unirest.New().SetURL("http://localhost:8080?A=1&B=2&C=3&D=1&D=2&F=4").ParseRequest()
+	recv := &Recv{}
+	sm := ParseStruct(recv)
+	err := BindWithStructMeta(WrapHTTPRequest(req), recv, sm)
+	assert.NoError(t, err)
+	assert.Equal(t, int16(1), recv.A2)
+	assert.Equal(t, int16(2), recv.B)
+	assert.Equal(t, int32(3), recv.C)
+	assert.Equal(t, 0, len(recv.D))
+	assert.Equal(t, int(0), recv.E)
+}
+
 func TestJson(t *testing.T) {
 	type TestJsonT struct {
 		A struct {

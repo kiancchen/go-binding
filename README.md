@@ -25,11 +25,13 @@ assert.Equal(t, 1, recv.X.A)
 
 ```go
 type S struct{
-    A int `bind:"auto"` // get A form header, query, form, json in order
-    B int `bind:"b,auto"` // get b from .... 
-    C int `bind:"c,query"` // get c from query
-    D int `bind:"d,query,header,form,required"` // get d from header, query, form and 													return an error if not provided
-    E int `bind:"auto,required"` // get E from ..... and return an error if not provided
+    A  int `bind:"auto"` // get A form header, query, form, json in order
+    A2 int               // field with no tag will be bind, same as 'auto'
+    B  int `bind:"b,auto"` // get b from .... 
+    C  int `bind:"c,query"` // get c from query
+    D  int `bind:"d,query,header,form,required"` // get d from header, query, form and 													return an error if not provided
+    E  int `bind:"auto,required"` // get E from ..... and return an error if not provided
+    F int `bind:"-"` // ignore this field
     File *multipart.FileHeader `bind:"auto"` // get File from multipart form
 }
 ```
