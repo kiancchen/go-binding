@@ -150,8 +150,9 @@ func TestIgnoreQuery(t *testing.T) {
 		C  int32
 		D  []int32 `bind:"-"`
 		E  int     `bind:"F,-" default:"99"`
+		F  int     `bind:"f"`
 	}
-	req, _ := unirest.New().SetURL("http://localhost:8080?A=1&B=2&C=3&D=1&D=2&F=4").ParseRequest()
+	req, _ := unirest.New().SetURL("http://localhost:8080?A=1&B=2&C=3&D=1&D=2&F=4&f=5").ParseRequest()
 	recv := &Recv{}
 	sm := ParseStruct(recv)
 	err := BindWithStructMeta(WrapHTTPRequest(req), recv, sm)
@@ -161,6 +162,7 @@ func TestIgnoreQuery(t *testing.T) {
 	assert.Equal(t, int32(3), recv.C)
 	assert.Equal(t, 0, len(recv.D))
 	assert.Equal(t, int(0), recv.E)
+	assert.Equal(t, int(5), recv.F)
 }
 
 func TestJson(t *testing.T) {

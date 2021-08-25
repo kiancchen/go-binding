@@ -222,6 +222,7 @@ func (field *fieldMetadata) parseTag() {
 	}
 
 	bindTags := strings.Split(bindTag, split)
+	isSourceSet := false
 	for _, value := range bindTags {
 		if value == "" {
 			continue
@@ -229,24 +230,25 @@ func (field *fieldMetadata) parseTag() {
 		switch value {
 		case bindIgnore:
 			field.isIgnored = true
+			isSourceSet = true
 		case bindQuery:
 			field.source |= query
+			isSourceSet = true
 		case bindForm:
 			field.source |= form
+			isSourceSet = true
 		case bindHeader:
 			field.source |= header
-			// header 首字母自动大写
-			name := field.fieldName
-			for i, v := range name {
-				field.fieldName = string(unicode.ToUpper(v)) + name[i+1:]
-				break
-			}
+			isSourceSet = true
 		case bindPath:
 			field.source |= path
+			isSourceSet = true
 		case bindAuto:
 			field.source |= Auto
+			isSourceSet = true
 		case bindJson:
 			field.source |= json
+			isSourceSet = true
 		case bindRequired, bindReq:
 			field.isRequired = true
 		default:
@@ -255,6 +257,10 @@ func (field *fieldMetadata) parseTag() {
 			field.fieldName = value
 
 		}
+	}
+
+	if !isSourceSet {
+		field.source |= Auto
 	}
 
 	field.preprocessor = strings.Split(tagInfo.Get(tagPre), split)
