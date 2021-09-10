@@ -22,7 +22,7 @@ const (
 	form   = 1 << 2
 	path   = 1 << 3
 	json   = 1 << 4
-	Auto   = math.MaxInt32
+	auto   = math.MaxInt32
 
 	// tagBind 的选项
 	bindIgnore   = "-"
@@ -35,6 +35,15 @@ const (
 	bindRequired = "required"
 	bindReq      = "req"
 )
+
+var sourceMap = map[string]int{
+	bindAuto:   auto,
+	bindHeader: header,
+	bindQuery:  query,
+	bindForm:   form,
+	bindPath:   path,
+	bindJson:   json,
+}
 
 var fileType = reflect.TypeOf(multipart.FileHeader{})
 
@@ -185,18 +194,18 @@ type fieldMetadata struct {
 }
 
 func (field *fieldMetadata) setValue(recv reflect.Value) {
-	// 如果有错误，那设为零值
-	v := *field.value
-	if !field.hasValue {
-		v = reflect.Zero(field.elemType)
-	}
-
-	if field.isPtr {
-		ptr := reflect.New(v.Type())
-		ptr.Elem().Set(v)
-		recv.Set(ptr)
+	if field.hasValue {
+		v := *field.value
+		if field.isPtr {
+			ptr := reflect.New(v.Type())
+			ptr.Elem().Set(v)
+			recv.Set(ptr)
+		} else {
+			recv.Set(v.Convert(field.elemType))
+		}
 	} else {
-		recv.Set(v.Convert(field.elemType))
+		v := reflect.Zero(field.originalType)
+		recv.Set(v)
 	}
 }
 
@@ -215,61 +224,47 @@ func (field *fieldMetadata) clone() *fieldMetadata {
 
 func (field *fieldMetadata) parseTag() {
 	tagInfo := field.tagInfo
-	bindTag, ok := tagInfo.Lookup(tagBind)
-	if !ok {
-		field.source |= Auto
-		return
-	}
 
-	bindTags := strings.Split(bindTag, split)
-	isSourceSet := false
-	for _, value := range bindTags {
-		if value == "" {
-			continue
-		}
-		switch value {
-		case bindIgnore:
-			field.isIgnored = true
-			isSourceSet = true
-		case bindQuery:
-			field.source |= query
-			isSourceSet = true
-		case bindForm:
-			field.source |= form
-			isSourceSet = true
-		case bindHeader:
-			field.source |= header
-			isSourceSet = true
-		case bindPath:
-			field.source |= path
-			isSourceSet = true
-		case bindAuto:
-			field.source |= Auto
-			isSourceSet = true
-		case bindJson:
-			field.source |= json
-			isSourceSet = true
-		case bindRequired, bindReq:
-			field.isRequired = true
-		default:
-			field.fieldJsonName = strings.TrimSuffix(field.fieldJsonName, field.fieldName)
-			field.fieldJsonName = field.fieldJsonName + value
-			field.fieldName = value
-
-		}
-	}
-
-	if !isSourceSet {
-		field.source |= Auto
-	}
-
-	field.preprocessor = strings.Split(tagInfo.Get(tagPre), split)
-
-	// default 解析
+	// parse default tag
 	defaultStr, ok := tagInfo.Lookup(tagDefault)
 	if ok {
 		field.hasDefault = true
 		field.defaultVal = defaultStr
+	}
+
+	// parse preprocessor tag
+	field.preprocessor = strings.Split(tagInfo.Get(tagPre), split)
+
+	// parse bind tag
+	bindTag := tagInfo.Get(tagBind)
+	bindTags := strings.Split(bindTag, split)
+	isSourceSet := false
+	for _, value := range bindTags {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+
+		if source, ok := sourceMap[value]; ok {
+			field.source |= source
+			isSourceSet = true
+		} else {
+			switch value {
+			case bindIgnore:
+				field.isIgnored = true
+				isSourceSet = true
+			case bindRequired, bindReq:
+				field.isRequired = true
+			default:
+				field.fieldJsonName = strings.TrimSuffix(field.fieldJsonName, field.fieldName)
+				field.fieldJsonName = field.fieldJsonName + value
+				field.fieldName = value
+			}
+		}
+	}
+
+	if !isSourceSet {
+		field.source |= auto
 	}
 }
 

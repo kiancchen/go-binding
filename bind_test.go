@@ -60,12 +60,13 @@ func TestQueryString(t *testing.T) {
 			G count     `bind:"g,query"`
 			I metric    `bind:"i,query" default:"def"`
 		} `bind:"auto"`
-		Y string    `bind:"y,query,req"`
-		Z *string   `bind:"z,query"`
-		H string    `bind:"h,query,req"`
-		J time.Time `bind:"auto"`
-		K Time      `bind:"auto"`
-		L int       `bind:"auto"`
+		Y  string    `bind:"y,query,req"`
+		Z  *string   `bind:"z,query"`
+		Z2 *string   `default:""`
+		H  string    `bind:"h,query,req"`
+		J  time.Time `bind:"auto"`
+		K  Time      `bind:"auto"`
+		L  int       `bind:"auto"`
 	}
 	req, _ := unirest.New().AddQuery("a", "a1").
 		AddQuery("a", "a2").
@@ -89,7 +90,8 @@ func TestQueryString(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "parameter type cannot be converted from string: [X.e, K, L]"))
 	assert.Equal(t, []string{"a1", "a2"}, recv.X.A)
 	assert.Equal(t, "y1", recv.Y)
-	assert.Equal(t, "", *recv.Z)
+	assert.Equal(t, (*string)(nil), recv.Z)
+	assert.Equal(t, "", *recv.Z2)
 
 	assert.Equal(t, 0, *((*recv.X.E)[0]))
 	assert.Equal(t, 2, *((*recv.X.E)[1]))
@@ -441,4 +443,24 @@ func TestJSON2(t *testing.T) {
 	recv := new(request)
 	err := Bind(WrapHTTPRequest(req), recv)
 	assert.Error(t, err)
+}
+
+func TestDefault(t *testing.T) {
+	type Recv struct {
+		A int8  `bind:"auto"`
+		B int16 `default:"10"`
+		C int32 `bind:"auto" default:"20"`
+		D int64 `bind:"d,auto" default:"30"`
+		E int64 `bind:"e,auto" default:"40"`
+	}
+	req, _ := unirest.New().SetURL("http://localhost:8080?e=50").ParseRequest()
+	recv := &Recv{}
+	sm := ParseStruct(recv)
+	err := BindWithStructMeta(WrapHTTPRequest(req), recv, sm)
+	assert.NoError(t, err)
+	assert.Equal(t, int8(0), recv.A)
+	assert.Equal(t, int16(10), recv.B)
+	assert.Equal(t, int32(20), recv.C)
+	assert.Equal(t, int64(30), recv.D)
+	assert.Equal(t, int64(50), recv.E)
 }
