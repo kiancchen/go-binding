@@ -105,7 +105,7 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 	} else if fieldMeta.isStruct {
 		value = reflect.New(fieldMeta.structMeta.StructType)
 		fieldMeta.isUnset = !bindStruct(r, value, fieldMeta.structMeta)
-		fieldMeta.hasValue = fieldMeta.isUnset
+		fieldMeta.hasValue = !fieldMeta.isUnset
 		value = value.Elem()
 	} else if fieldMeta.isSlice && fieldMeta.sliceMeta.isStruct {
 		sliceMeta := fieldMeta.sliceMeta

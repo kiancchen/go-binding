@@ -218,7 +218,7 @@ func TestQueryNum(t *testing.T) {
 	assert.Equal(t, &[]uint16{31, 32}, (*recv.X).C)
 	assert.Equal(t, float32(41), *(*recv.X).D)
 	assert.Equal(t, true, recv.Y)
-	assert.Equal(t, int64(0), *recv.Z)
+	assert.Equal(t, (*int64)(nil), recv.Z)
 }
 
 func TestHeaderString(t *testing.T) {
@@ -252,7 +252,7 @@ func TestHeaderString(t *testing.T) {
 	assert.Equal(t, []string{"c1", "c2"}, *(*recv.X).C)
 	assert.Equal(t, "d1", *(*recv.X).D)
 	assert.Equal(t, "y1", recv.Y)
-	assert.Equal(t, "", *recv.Z)
+	assert.Equal(t, (*string)(nil), recv.Z)
 }
 
 func TestHeaderNum(t *testing.T) {
@@ -286,7 +286,7 @@ func TestHeaderNum(t *testing.T) {
 	assert.Equal(t, &[]uint16{31, 32}, (*recv.X).C)
 	assert.Equal(t, float32(41), *(*recv.X).D)
 	assert.Equal(t, true, recv.Y)
-	assert.Equal(t, int64(0), *recv.Z)
+	assert.Equal(t, (*int64)(nil), recv.Z)
 }
 
 func TestFormString(t *testing.T) {
@@ -324,7 +324,7 @@ func TestFormString(t *testing.T) {
 	assert.Equal(t, []string{"c1", "c2"}, *(*recv.X).C)
 	assert.Equal(t, "d1", *(*recv.X).D)
 	assert.Equal(t, "y1", recv.Y)
-	assert.Equal(t, "", *recv.Z)
+	assert.Equal(t, (*string)(nil), recv.Z)
 
 }
 
@@ -363,7 +363,7 @@ func TestFormNum(t *testing.T) {
 	assert.Equal(t, &[]uint16{31, 32}, (*recv.X).C)
 	assert.Equal(t, float32(41), *(*recv.X).D)
 	assert.Equal(t, true, recv.Y)
-	assert.Equal(t, int64(0), *recv.Z)
+	assert.Equal(t, (*int64)(nil), recv.Z)
 }
 
 func TestJSON(t *testing.T) {
