@@ -193,8 +193,12 @@ func getFieldValue(r *request, fieldMeta *fieldMetadata) (value reflect.Value) {
 
 	convertor := getConvertor(elemType)
 	if convertor == nil {
-		fieldMeta.hasConversionError = true
-		return
+		if len(originValues) > 0 {
+			fieldMeta.hasConversionError = true
+			return
+		} else {
+			return
+		}
 	}
 
 	for i, originValue := range originValues {
