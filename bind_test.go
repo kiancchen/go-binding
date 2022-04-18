@@ -445,6 +445,33 @@ func TestJSON2(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestJSONStrutInArray(t *testing.T) {
+	type owner struct {
+		Id int `bind:"required"`
+	}
+	type site struct {
+		Owner owner
+	}
+
+	type request struct {
+		Sites []*site `bind:"auto"`
+	}
+
+	req, _ := unirest.New().SetJSONBody([]byte(`
+{
+	"Sites":[
+		{
+			"Owner": {
+				"Id": 99
+			}
+		}
+    ]
+}`)).ParseRequest()
+	recv := new(request)
+	err := Bind(WrapHTTPRequest(req), recv)
+	assert.NoError(t, err)
+}
+
 func TestDefault(t *testing.T) {
 	type Recv struct {
 		A int8  `bind:"auto"`

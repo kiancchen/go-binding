@@ -69,12 +69,15 @@ func (s *StructMetadata) attachLayerNum(num int) {
 	for i := range s.FieldList {
 		f := s.FieldList[i]
 		f.fieldJsonName = strings.Replace(f.fieldJsonName, "#", strconv.Itoa(num), 1)
+		f.parentSliceIdx = num
 		if f.isSlice {
 			f.sliceMeta.fieldJsonName = strings.Replace(f.sliceMeta.fieldJsonName, "#", strconv.Itoa(num), 1)
 			f.sliceMeta.structMeta.attachLayerNum(num)
 			for _, sd := range f.sliceMeta.structData {
 				sd.attachLayerNum(num)
 			}
+		} else if f.isStruct {
+			f.structMeta.attachLayerNum(num)
 		}
 	}
 }
@@ -167,6 +170,8 @@ type fieldMetadata struct {
 
 	// Field的名字，用于从Json中找值
 	fieldJsonName string
+
+	parentSliceIdx int
 
 	// Field来源，Query,Body,Header
 	source int
