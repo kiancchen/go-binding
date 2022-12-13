@@ -109,27 +109,33 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 		value = value.Elem()
 	} else if fieldMeta.isSlice && fieldMeta.sliceMeta.isStruct {
 		sliceMeta := fieldMeta.sliceMeta
-		array := gjson.GetBytes(r.GetBody(), sliceMeta.fieldJsonName).Array()
-		length := len(array)
-		value = reflect.MakeSlice(sliceMeta.sliceType, length, length)
-		sliceMeta.structData = make([]*StructMetadata, length)
-		for j := range sliceMeta.structData {
-			sliceMeta.structData[j] = sliceMeta.structMeta.clone()
-			sliceMeta.structData[j].attachLayerNum(j)
+		arrayResult := gjson.GetBytes(r.GetBody(), sliceMeta.fieldJsonName)
 
-			receiver := reflect.New(sliceMeta.elemType)
-			bindStruct(r, receiver, sliceMeta.structData[j])
+		if arrayResult.Exists() {
+			array := arrayResult.Array()
+			length := len(array)
+			value = reflect.MakeSlice(sliceMeta.sliceType, length, length)
+			sliceMeta.structData = make([]*StructMetadata, length)
+			for j := range sliceMeta.structData {
+				sliceMeta.structData[j] = sliceMeta.structMeta.clone()
+				sliceMeta.structData[j].attachLayerNum(j)
 
-			if !sliceMeta.isPtr {
-				receiver = receiver.Elem()
+				receiver := reflect.New(sliceMeta.elemType)
+				bindStruct(r, receiver, sliceMeta.structData[j])
+
+				if !sliceMeta.isPtr {
+					receiver = receiver.Elem()
+				}
+
+				value.Index(j).Set(receiver)
 			}
-
-			value.Index(j).Set(receiver)
-		}
-		fieldMeta.hasValue = true
-		if length == 0 {
+			fieldMeta.hasValue = true
+			fieldMeta.isUnset = false
+		} else {
+			fieldMeta.hasValue = false
 			fieldMeta.isUnset = true
 		}
+
 	} else {
 		fieldMeta.isUnset = true
 	}
