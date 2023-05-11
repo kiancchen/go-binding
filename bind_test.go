@@ -491,3 +491,23 @@ func TestDefault(t *testing.T) {
 	assert.Equal(t, int64(30), recv.D)
 	assert.Equal(t, int64(50), recv.E)
 }
+
+func TestConversionErr(t *testing.T) {
+	type Recv struct {
+		Time time.Time
+	}
+
+	RegisterTypeConvertor(time.Time{}, func(s string) (interface{}, error) {
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			return nil, err
+		}
+		return t, nil
+	})
+	req, _ := unirest.New().SetURL("http://localhost:8080?Time=123").ParseRequest()
+	recv := &Recv{}
+	sm := ParseStruct(recv)
+	err := BindWithStructMeta(WrapHTTPRequest(req), recv, sm)
+	assert.Error(t, err)
+	assert.Equal(t, "parameter type cannot be converted from string: [Time]", err.Error())
+}

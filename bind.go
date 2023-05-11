@@ -218,7 +218,7 @@ func getFieldValue(r *request, fieldMeta *fieldMetadata) (value reflect.Value) {
 		// 如果不是 slice，直接返回第一个
 		if !fieldMeta.isSlice {
 			value = v
-			fieldMeta.hasValue = true
+			fieldMeta.hasValue = convertedValue != nil
 			return
 		}
 
