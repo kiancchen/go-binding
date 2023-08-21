@@ -511,3 +511,29 @@ func TestConversionErr(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "parameter type cannot be converted from string: [Time]", err.Error())
 }
+
+func TestJSONNumInArray(t *testing.T) {
+	type item struct {
+		StrList []string
+		IntList []int
+	}
+
+	type request struct {
+		Lists []*item `bind:"auto"`
+	}
+
+	req, _ := unirest.New().SetJSONBody([]byte(`
+{
+	"Lists":[
+		{
+			"IntList":[ 1,2,3 ]
+			"StrList":[ "1","2","3" ]
+		}
+    ]
+}`)).ParseRequest()
+	recv := new(request)
+	err := Bind(WrapHTTPRequest(req), recv)
+	assert.NoError(t, err)
+	assert.Equal(t, []int{1, 2, 3}, recv.Lists[0].IntList)
+	assert.Equal(t, []string{"1", "2", "3"}, recv.Lists[0].StrList)
+}

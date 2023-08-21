@@ -70,7 +70,7 @@ func (s *StructMetadata) attachLayerNum(num int) {
 		f := s.FieldList[i]
 		f.fieldJsonName = strings.Replace(f.fieldJsonName, "#", strconv.Itoa(num), 1)
 		f.parentSliceIdx = num
-		if f.isSlice {
+		if f.isSlice && f.sliceMeta.isStruct {
 			f.sliceMeta.fieldJsonName = strings.Replace(f.sliceMeta.fieldJsonName, "#", strconv.Itoa(num), 1)
 			f.sliceMeta.structMeta.attachLayerNum(num)
 			for _, sd := range f.sliceMeta.structData {
