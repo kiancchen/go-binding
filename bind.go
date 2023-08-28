@@ -109,9 +109,11 @@ func resolveField(r *request, fieldMeta *fieldMetadata) {
 		value = value.Elem()
 	} else if fieldMeta.isSlice && fieldMeta.sliceMeta.isStruct {
 		sliceMeta := fieldMeta.sliceMeta
-		arrayResult := gjson.GetBytes(r.GetBody(), sliceMeta.fieldJsonName)
+		body := r.GetBody()
+		validJson := gjson.ValidBytes(body)
+		arrayResult := gjson.GetBytes(body, sliceMeta.fieldJsonName)
 
-		if arrayResult.Exists() {
+		if validJson && arrayResult.Exists() {
 			array := arrayResult.Array()
 			length := len(array)
 			value = reflect.MakeSlice(sliceMeta.sliceType, length, length)
@@ -362,11 +364,14 @@ func getValue(r *request, fieldMeta *fieldMetadata) (originValue []string, prese
 	}
 
 	if hasTag(fieldMeta.source, json) {
-		v := gjson.GetBytes(r.GetBody(), fieldMeta.fieldJsonName)
-		present = v.Exists()
-		if present {
-			originValue = []string{v.String()}
-			return
+		body := r.GetBody()
+		if gjson.ValidBytes(body) {
+			v := gjson.GetBytes(body, fieldMeta.fieldJsonName)
+			present = v.Exists()
+			if present {
+				originValue = []string{v.String()}
+				return
+			}
 		}
 	}
 

@@ -1,6 +1,7 @@
 package binding
 
 import (
+	js "encoding/json"
 	"net/http"
 	"net/url"
 	"strings"
@@ -526,7 +527,7 @@ func TestJSONNumInArray(t *testing.T) {
 {
 	"Lists":[
 		{
-			"IntList":[ 1,2,3 ]
+			"IntList":[ 1,2,3 ],
 			"StrList":[ "1","2","3" ]
 		}
     ]
@@ -536,4 +537,43 @@ func TestJSONNumInArray(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []int{1, 2, 3}, recv.Lists[0].IntList)
 	assert.Equal(t, []string{"1", "2", "3"}, recv.Lists[0].StrList)
+}
+
+func TestJSONInForm(t *testing.T) {
+	type p struct {
+		Name string
+		Age  int
+	}
+	type request struct {
+		IntArray []int
+		ObjArray []p
+		Obj      p
+	}
+	RegisterTypeConvertor(p{}, func(s string) (interface{}, error) {
+		obj := p{}
+		err := js.Unmarshal([]byte(s), &obj)
+		return obj, err
+	})
+
+	intArray := `
+	[ 1,2,3 ]
+    `
+	objArray := `
+	[ {"Name":"a", "Age":18}, {"Name":"b", "Age":20} ]
+    `
+	obj := `
+	{ "Name":"a","Age":18 }
+    `
+
+	req, _ := unirest.New().AddFormField("IntArray", intArray).AddFormField("ObjArray", objArray).AddFormField("Obj", obj).ParseRequest()
+	recv := new(request)
+	err := Bind(WrapHTTPRequest(req), recv)
+	assert.NoError(t, err)
+	assert.Equal(t, []int{1, 2, 3}, recv.IntArray)
+	assert.Equal(t, "a", recv.ObjArray[0].Name)
+	assert.Equal(t, 18, recv.ObjArray[0].Age)
+	assert.Equal(t, "b", recv.ObjArray[1].Name)
+	assert.Equal(t, 20, recv.ObjArray[1].Age)
+	assert.Equal(t, "a", recv.Obj.Name)
+	assert.Equal(t, 18, recv.Obj.Age)
 }
